@@ -27,23 +27,25 @@ import org.apache.ratis.util.TimeDuration;
 /** An {@link RetryPolicy.Event} specific to client request failure. */
 public class ClientRetryEvent implements RetryPolicy.Event {
   private final int attemptCount;
+  private final long attemptStartTime;
   private final int causeCount;
   private final RaftClientRequest request;
   private final Throwable cause;
   private PendingClientRequest pending;
 
   @VisibleForTesting
-  public ClientRetryEvent(int attemptCount, RaftClientRequest request, Throwable cause) {
-    this(attemptCount, request, attemptCount, cause);
+  public ClientRetryEvent(int attemptCount, long attemptStartTime, RaftClientRequest request, Throwable cause) {
+    this(attemptCount, attemptStartTime, request, attemptCount, cause);
   }
 
   public ClientRetryEvent(RaftClientRequest request, Throwable t, PendingClientRequest pending) {
-    this(pending.getAttemptCount(), request, pending.getExceptionCount(t), t);
+    this(pending.getAttemptCount(), pending.getAttemptStartTime(), request, pending.getExceptionCount(t), t);
     this.pending = pending;
   }
 
-  private ClientRetryEvent(int attemptCount, RaftClientRequest request, int causeCount, Throwable cause) {
+  private ClientRetryEvent(int attemptCount, long attemptStartTime, RaftClientRequest request, int causeCount, Throwable cause) {
     this.attemptCount = attemptCount;
+    this.attemptStartTime = attemptStartTime;
     this.causeCount = causeCount;
     this.request = request;
     this.cause = cause;
@@ -52,6 +54,11 @@ public class ClientRetryEvent implements RetryPolicy.Event {
   @Override
   public int getAttemptCount() {
     return attemptCount;
+  }
+
+  @Override
+  public long getAttemptStartTime() {
+    return attemptStartTime;
   }
 
   @Override

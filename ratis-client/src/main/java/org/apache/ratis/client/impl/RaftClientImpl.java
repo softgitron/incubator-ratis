@@ -68,10 +68,15 @@ public final class RaftClientImpl implements RaftClient {
   public abstract static class PendingClientRequest {
     private final long creationTimeInMs = System.currentTimeMillis();
     private final CompletableFuture<RaftClientReply> replyFuture = new CompletableFuture<>();
+    private final long attemptStartTime;
     private final AtomicInteger attemptCount = new AtomicInteger();
     private final Map<Class<?>, Integer> exceptionCount = new ConcurrentHashMap<>();
 
     public abstract RaftClientRequest newRequestImpl();
+
+    public PendingClientRequest() {
+      attemptStartTime = System.currentTimeMillis();
+    }
 
     final RaftClientRequest newRequest() {
       attemptCount.incrementAndGet();
@@ -84,6 +89,10 @@ public final class RaftClientImpl implements RaftClient {
 
     public int getAttemptCount() {
       return attemptCount.get();
+    }
+
+    public long getAttemptStartTime() {
+      return attemptStartTime;
     }
 
     int incrementExceptionCount(Throwable t) {

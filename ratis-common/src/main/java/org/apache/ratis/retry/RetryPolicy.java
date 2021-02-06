@@ -55,6 +55,11 @@ public interface RetryPolicy {
     /** @return the number of attempts tried so far. */
     int getAttemptCount();
 
+    /** @return epoch of the starting time. */
+    default long getAttemptStartTime()  {
+      return 0;
+    };
+
     /** @return the number of attempts for the event cause. */
     default int getCauseCount() {
       return 0;
