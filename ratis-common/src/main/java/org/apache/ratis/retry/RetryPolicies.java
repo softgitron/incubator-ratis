@@ -21,6 +21,7 @@ import org.apache.ratis.util.JavaUtils;
 import org.apache.ratis.util.Preconditions;
 import org.apache.ratis.util.TimeDuration;
 
+import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 
 /**
@@ -45,6 +46,11 @@ public interface RetryPolicies {
   /** For any requests, keep retrying a limited number of attempts with a fixed sleep time between attempts. */
   static RetryLimited retryUpToMaximumCountWithFixedSleep(int maxAttempts, TimeDuration sleepTime) {
     return new RetryLimited(maxAttempts, sleepTime);
+  }
+
+  /** For any requests, keep retrying until specified time has reached with a fixed sleep time between attempts. */
+  static RetryLimitedTime retryUpToMaximumTimeWithFixedSleep(TimeDuration maxDuration, TimeDuration sleepTime) {
+    return new RetryLimitedTime(maxDuration, sleepTime);
   }
 
   class Constants {
@@ -124,6 +130,37 @@ public interface RetryPolicies {
     @Override
     public Action handleAttemptFailure(Event event) {
       return event.getAttemptCount() < maxAttempts? super.handleAttemptFailure(event): NO_RETRY_ACTION;
+    }
+
+    @Override
+    public String toString() {
+      return myString.get();
+    }
+  }
+
+  /** For any requests, keep retrying until specified time has reached with a fixed sleep time between attempts. */
+  class RetryLimitedTime extends RetryForeverWithSleep  {
+    private final TimeDuration maxDuration;
+    private final Supplier<String> myString;
+
+    private RetryLimitedTime(TimeDuration maxDuration, TimeDuration sleepTime) {
+      super(sleepTime);
+
+      this.maxDuration = maxDuration;
+      this.myString = JavaUtils.memoize(() -> JavaUtils.getClassSimpleName(getClass())
+              + "(maxDuration=" + maxDuration + ", sleepTime=" + sleepTime + ")");
+    }
+
+    public TimeDuration getMaxDuration() {
+      return maxDuration;
+    }
+
+    @Override
+    public Action handleAttemptFailure(Event event) {
+      long startTime = event.getAttemptStartTime();
+      long plus = maxDuration.to(TimeUnit.MILLISECONDS).getDuration();
+      return startTime + plus > System.currentTimeMillis()
+              ? super.handleAttemptFailure(event): NO_RETRY_ACTION;
     }
 
     @Override
