@@ -45,14 +45,7 @@ import org.apache.ratis.util.TimeDuration;
 import org.apache.ratis.util.TimeoutScheduler;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -117,8 +110,10 @@ public final class RaftClientImpl implements RaftClient {
 
   private final ClientId clientId;
   private final RaftClientRpc clientRpc;
-  private final RaftPeerList peers = new RaftPeerList();
+  private final RaftPeerList peers;
   private final RaftGroupId groupId;
+  private final RaftPeer primaryDataStreamServer;
+  private final RaftProperties properties;
   private final RetryPolicy retryPolicy;
 
   private volatile RaftPeerId leaderId;
@@ -137,9 +132,12 @@ public final class RaftClientImpl implements RaftClient {
   RaftClientImpl(ClientId clientId, RaftGroup group, RaftPeerId leaderId, RaftPeer primaryDataStreamServer,
       RaftClientRpc clientRpc, RaftProperties properties, RetryPolicy retryPolicy) {
     this.clientId = clientId;
+    this.peers = new RaftPeerList();
     this.peers.set(group.getPeers());
     this.groupId = group.getGroupId();
     this.leaderId = leaderId != null? leaderId : getHighestPriorityPeerId();
+    this.primaryDataStreamServer = primaryDataStreamServer;
+    this.properties = properties;
     this.retryPolicy = Objects.requireNonNull(retryPolicy, "retry policy can't be null");
 
     clientRpc.addRaftPeers(group.getPeers());
@@ -150,11 +148,34 @@ public final class RaftClientImpl implements RaftClient {
     this.asyncApi = JavaUtils.memoize(() -> new AsyncImpl(this));
     this.blockingApi = JavaUtils.memoize(() -> new BlockingImpl(this));
     this.dataStreamApi = JavaUtils.memoize(() -> DataStreamClient.newBuilder()
-        .setClientId(clientId)
-        .setRaftGroupId(groupId)
-        .setDataStreamServer(primaryDataStreamServer)
-        .setProperties(properties)
-        .build());
+            .setClientId(clientId)
+            .setRaftGroupId(groupId)
+            .setDataStreamServer(primaryDataStreamServer)
+            .setProperties(properties)
+            .build());
+    this.adminApi = JavaUtils.memoize(() -> new AdminImpl(this));
+  }
+
+  private RaftClientImpl(RaftClientImpl oldInstance, RaftProperties newProperties, RetryPolicy newRetryPolicy) {
+    this.clientId = oldInstance.clientId;
+    this.peers = oldInstance.peers;
+    this.groupId = oldInstance.groupId;
+    this.leaderId = oldInstance.leaderId;
+    this.primaryDataStreamServer = oldInstance.primaryDataStreamServer;
+    this.properties = (newProperties != null) ? newProperties : oldInstance.properties;
+    this.retryPolicy = (newRetryPolicy != null) ? newRetryPolicy : oldInstance.retryPolicy;
+    this.clientRpc = oldInstance.clientRpc;
+
+    this.orderedAsync = JavaUtils.memoize(() -> OrderedAsync.newInstance(this, properties));
+    this.messageStreamApi = JavaUtils.memoize(() -> MessageStreamImpl.newInstance(this, properties));
+    this.asyncApi = JavaUtils.memoize(() -> new AsyncImpl(this));
+    this.blockingApi = JavaUtils.memoize(() -> new BlockingImpl(this));
+    this.dataStreamApi = JavaUtils.memoize(() -> DataStreamClient.newBuilder()
+            .setClientId(clientId)
+            .setRaftGroupId(groupId)
+            .setDataStreamServer(primaryDataStreamServer)
+            .setProperties(properties)
+            .build());
     this.adminApi = JavaUtils.memoize(() -> new AdminImpl(this));
   }
 
@@ -184,7 +205,13 @@ public final class RaftClientImpl implements RaftClient {
     return clientId;
   }
 
-  RetryPolicy getRetryPolicy() {
+  @Override
+  public RaftProperties getProperties() {
+    return properties;
+  }
+
+  @Override
+  public RetryPolicy getRetryPolicy() {
     return retryPolicy;
   }
 
@@ -243,6 +270,21 @@ public final class RaftClientImpl implements RaftClient {
   @Override
   public DataStreamApi getDataStreamApi() {
     return dataStreamApi.get();
+  }
+
+  @Override
+  public RaftClientImpl getNewInstanceWithOptions(RaftProperties newProperties) {
+    return new RaftClientImpl(this, newProperties, null);
+  }
+
+  @Override
+  public RaftClientImpl getNewInstanceWithOptions(RetryPolicy newRetryPolicy) {
+    return new RaftClientImpl(this, null, newRetryPolicy);
+  }
+
+  @Override
+  public RaftClientImpl getNewInstanceWithOptions(RaftProperties newProperties, RetryPolicy newRetryPolicy) {
+    return new RaftClientImpl(this, newProperties, newRetryPolicy);
   }
 
   Throwable noMoreRetries(ClientRetryEvent event) {
