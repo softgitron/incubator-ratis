@@ -69,6 +69,21 @@ public interface RaftClient extends Closeable {
   /** @return the {@link DataStreamApi}. */
   DataStreamApi getDataStreamApi();
 
+  /** @return current raft properties {@link RaftProperties}. */
+  RaftProperties getProperties();
+
+  /** @return current retry policy {@link RetryPolicy}. */
+  RetryPolicy getRetryPolicy();
+
+  /** @return new client with custom properties {@link RaftClient}. */
+  RaftClient getNewInstanceWithOptions(RaftProperties newProperties);
+
+  /** @return new client with custom retry policy {@link RaftClient}. */
+  RaftClient getNewInstanceWithOptions(RetryPolicy newRetryPolicy);
+
+  /** @return new client with custom properties and retry policy {@link RaftClient}. */
+  RaftClient getNewInstanceWithOptions(RaftProperties newProperties, RetryPolicy newRetryPolicy);
+
   /** @return a {@link Builder}. */
   static Builder newBuilder() {
     return new Builder();
