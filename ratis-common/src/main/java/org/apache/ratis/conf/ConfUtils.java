@@ -283,6 +283,10 @@ public interface ConfUtils {
     if ("LOG".equals(fieldName)) {
       return;
     }
+    // Required by coverity tests.
+    if ("$jacocoData".equals(fieldName)) {
+      return;
+    }
     if (!"PREFIX".equals(fieldName)) {
       throw new IllegalStateException("Unexpected field: " + fieldName);
     }
