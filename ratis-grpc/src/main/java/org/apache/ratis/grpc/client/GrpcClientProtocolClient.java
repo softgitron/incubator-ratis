@@ -222,7 +222,8 @@ public class GrpcClientProtocolClient implements Closeable {
     return asyncStub.ordered(responseHandler);
   }
 
-  StreamObserver<RaftClientRequestProto> orderedWithTimeout(RaftClientRequestProto.TypeCase type, StreamObserver<RaftClientReplyProto> responseHandler) {
+  StreamObserver<RaftClientRequestProto> orderedWithTimeout(RaftClientRequestProto.TypeCase type,
+                                                            StreamObserver<RaftClientReplyProto> responseHandler) {
     TimeDuration timeout;
     if (RaftClientRequestProto.TypeCase.WATCH.equals(type)) {
       timeout = watchRequestTimeoutDuration;
