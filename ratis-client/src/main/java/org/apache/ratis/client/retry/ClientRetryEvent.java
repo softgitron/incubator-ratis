@@ -43,7 +43,8 @@ public class ClientRetryEvent implements RetryPolicy.Event {
     this.pending = pending;
   }
 
-  private ClientRetryEvent(int attemptCount, long attemptStartTime, RaftClientRequest request, int causeCount, Throwable cause) {
+  private ClientRetryEvent(int attemptCount, long attemptStartTime, RaftClientRequest request, int causeCount,
+                           Throwable cause) {
     this.attemptCount = attemptCount;
     this.attemptStartTime = attemptStartTime;
     this.causeCount = causeCount;

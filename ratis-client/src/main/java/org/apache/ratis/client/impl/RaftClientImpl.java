@@ -74,7 +74,7 @@ public final class RaftClientImpl implements RaftClient {
 
     public abstract RaftClientRequest newRequestImpl();
 
-    public PendingClientRequest() {
+    protected PendingClientRequest() {
       attemptStartTime = System.currentTimeMillis();
     }
 
