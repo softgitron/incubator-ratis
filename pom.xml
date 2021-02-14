@@ -202,7 +202,8 @@
     <apache-rat-plugin.version>0.13</apache-rat-plugin.version>
     <build-helper-maven-plugin.version>1.9</build-helper-maven-plugin.version>
     <exec-maven-plugin.version>1.6.0</exec-maven-plugin.version>
-    <findbugs.version>3.0.0</findbugs.version>
+    <spotbugs.version>4.2.1</spotbugs.version>
+    <spotbugs-plugin.version>4.2.0</spotbugs-plugin.version>
     <wagon-ssh.version>1.0</wagon-ssh.version>
 
     <distMgmtSnapshotsId>apache.snapshots.https</distMgmtSnapshotsId>
@@ -248,6 +249,8 @@
     <!-- LOG4J version -->
     <log4j.version>1.2.17</log4j.version>
 
+    <!-- Skip JaCoCo coverity reports by default -->
+    <jacoco.skip>true</jacoco.skip>
   </properties>
 
   <dependencyManagement>
@@ -497,6 +500,13 @@
         <artifactId>javax.annotation-api</artifactId>
         <version>1.2</version>
       </dependency>
+
+      <dependency>
+        <groupId>com.github.spotbugs</groupId>
+        <artifactId>spotbugs-annotations</artifactId>
+        <version>${spotbugs.version}</version>
+        <optional>true</optional>
+      </dependency>
     </dependencies>
   </dependencyManagement>
 
@@ -563,9 +573,20 @@
           </configuration>
         </plugin>
         <plugin>
-          <groupId>org.codehaus.mojo</groupId>
-          <artifactId>findbugs-maven-plugin</artifactId>
-          <version>${findbugs.version}</version>
+          <groupId>com.github.spotbugs</groupId>
+          <artifactId>spotbugs-maven-plugin</artifactId>
+          <version>${spotbugs-plugin.version}</version>
+          <dependencies>
+            <dependency>
+              <groupId>com.github.spotbugs</groupId>
+              <artifactId>spotbugs</artifactId>
+              <version>${spotbugs.version}</version>
+            </dependency>
+          </dependencies>
+          <configuration>
+            <fork>true</fork>
+            <maxHeap>2048</maxHeap>
+          </configuration>
         </plugin>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
@@ -684,7 +705,7 @@
             <reuseForks>false</reuseForks>
             <trimStackTrace>false</trimStackTrace>
             <forkedProcessTimeoutInSeconds>600</forkedProcessTimeoutInSeconds>
-            <argLine>-Xmx2048m -XX:+HeapDumpOnOutOfMemoryError</argLine>
+            <argLine>@{argLine} -Xmx2048m -XX:+HeapDumpOnOutOfMemoryError</argLine>
             <systemPropertyVariables>
               <ratis.log.dir>${project.build.directory}/log</ratis.log.dir>
               <ratis.tmp.dir>${project.build.directory}/tmp</ratis.tmp.dir>
@@ -774,8 +795,8 @@
 
     <plugins>
       <plugin>
-        <groupId>org.codehaus.mojo</groupId>
-        <artifactId>findbugs-maven-plugin</artifactId>
+        <groupId>com.github.spotbugs</groupId>
+        <artifactId>spotbugs-maven-plugin</artifactId>
       </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
@@ -866,6 +887,25 @@
               <outputDirectory>target/classes</outputDirectory>
               <outputName>ratis-version.properties</outputName>
             </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.jacoco</groupId>
+        <artifactId>jacoco-maven-plugin</artifactId>
+        <version>0.8.6</version>
+        <executions>
+          <execution>
+            <goals>
+              <goal>prepare-agent</goal>
+            </goals>
+          </execution>
+          <execution>
+            <id>report</id>
+            <phase>prepare-package</phase>
+            <goals>
+              <goal>report</goal>
+            </goals>
           </execution>
         </executions>
       </plugin>
@@ -1059,6 +1099,58 @@
                 </goals>
               </execution>
             </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+
+    <profile>
+      <id>grpc-tests</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-surefire-plugin</artifactId>
+            <configuration>
+              <includes>
+                <include>org.apache.ratis.grpc.**</include>
+              </includes>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+    <profile>
+      <id>server-tests</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-surefire-plugin</artifactId>
+            <configuration>
+              <includes>
+                <include>org.apache.ratis.datastream.**</include>
+                <include>org.apache.ratis.server.**</include>
+              </includes>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+    <profile>
+      <id>misc-tests</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-surefire-plugin</artifactId>
+            <configuration>
+              <excludes>
+                <exclude>org.apache.ratis.datastream.**</exclude>
+                <exclude>org.apache.ratis.grpc.**</exclude>
+                <exclude>org.apache.ratis.server.**</exclude>
+              </excludes>
+            </configuration>
           </plugin>
         </plugins>
       </build>
