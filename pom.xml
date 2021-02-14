@@ -249,6 +249,8 @@
     <!-- LOG4J version -->
     <log4j.version>1.2.17</log4j.version>
 
+    <!-- Skip JaCoCo coverity reports by default -->
+    <jacoco.skip>true</jacoco.skip>
   </properties>
 
   <dependencyManagement>
@@ -703,7 +705,7 @@
             <reuseForks>false</reuseForks>
             <trimStackTrace>false</trimStackTrace>
             <forkedProcessTimeoutInSeconds>600</forkedProcessTimeoutInSeconds>
-            <argLine>-Xmx2048m -XX:+HeapDumpOnOutOfMemoryError</argLine>
+            <argLine>@{argLine} -Xmx2048m -XX:+HeapDumpOnOutOfMemoryError</argLine>
             <systemPropertyVariables>
               <ratis.log.dir>${project.build.directory}/log</ratis.log.dir>
               <ratis.tmp.dir>${project.build.directory}/tmp</ratis.tmp.dir>
@@ -885,6 +887,25 @@
               <outputDirectory>target/classes</outputDirectory>
               <outputName>ratis-version.properties</outputName>
             </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.jacoco</groupId>
+        <artifactId>jacoco-maven-plugin</artifactId>
+        <version>0.8.6</version>
+        <executions>
+          <execution>
+            <goals>
+              <goal>prepare-agent</goal>
+            </goals>
+          </execution>
+          <execution>
+            <id>report</id>
+            <phase>prepare-package</phase>
+            <goals>
+              <goal>report</goal>
+            </goals>
           </execution>
         </executions>
       </plugin>

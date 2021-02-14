@@ -13,14 +13,10 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
-cd "$DIR/../.." || exit 1
 
-if [ ! "$SONAR_TOKEN" ]; then
-  echo "SONAR_TOKEN environment variable should be set"
-  exit 1
-fi
-mvn -B verify -DskipShade -DskipTests org.sonarsource.scanner.maven:sonar-maven-plugin:3.6.0.1398:sonar \
--Dsonar.host.url=https://sonarcloud.io \
--Dsonar.coverage.jacoco.xmlReportPaths=$(find "$(pwd)" -path '*jacoco.xml' | tr '\n' ',') \
--Dsonar.organization=softgitron -Dsonar.projectKey=softgitron_incubator-ratis
+set -o pipefail
+
+cd "$(dirname "$0")/../.."
+mkdir -p target/unit
+
+cp --parents -t target/unit $(find -path '*jacoco.xml' | tr '\n' ' ')
