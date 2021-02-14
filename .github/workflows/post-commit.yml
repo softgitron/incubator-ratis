@@ -134,9 +134,10 @@ jobs:
           ./dev-support/checks/unit.sh -P${{ matrix.profile }}-tests
           -Djacoco.skip=false
           -Dsurefire.rerunFailingTestsCount=3
-      - run: mvn jacoco:report -Djacoco.skip=false
+      - name: Merge JaCoCo results
+        run: mvn -DskipTests -Djacoco.skip=false verify
       - name: Copy JaCoCo XML report to artifacts
-        run: ./dev-support/ci/copy_coverity_artifacts.sh
+        run: cp ./ratis-coverage/target/site/jacoco-aggregate/jacoco.xml ./target/unit
       - name: Summary of failures
         run: cat target/unit/summary.txt
         if: ${{ !cancelled() }}
