@@ -126,7 +126,7 @@ public abstract class MD5FileUtil {
     try {
       MessageDigest digester = MD5Hash.getDigester();
       DigestInputStream dis = new DigestInputStream(in, digester);
-      IOUtils.readFully(dis, 128*1024);
+      IOUtils.readFully(dis);
 
       return new MD5Hash(digester.digest());
     } finally {
